@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Falling Items Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: radial-gradient(circle, #1a1a3a 0%, #0a0a2a 100%);
+            color: white;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 800px;
+            height: 600px;
+            border: 3px solid #4CAF50;
+            position: relative;
+            background: rgba(0, 0, 0, 0.7);
+            overflow: hidden;
+            border-radius: 15px;
+            box-shadow: 0 0 30px rgba(76, 175, 80, 0.3);
+            display: none;
+        }
+
+        #player {
+            width: 100px;
+            height: 20px;
+            background: linear-gradient(45deg, #00ff88, #00ffcc);
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.7);
+        }
+
+        .item {
+            width: 30px;
+            height: 30px;
+            position: absolute;
+            border-radius: 50%;
+        }
+
+        .green-item {
+            background: linear-gradient(45deg, #66ff66, #00ff00);
+        }
+
+        .red-item {
+            background: linear-gradient(45deg, #ff6666, #ff0000);
+        }
+
+        .blue-item {
+            background: linear-gradient(45deg, #66ccff, #0066ff);
+        }
+
+        .gold-item {
+            background: linear-gradient(45deg, #ffd700, #ffa500);
+        }
+
+        #hud {
+            width: 100%;
+            max-width: 800px;
+            display: none;
+            justify-content: space-between;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            margin-bottom: 20px;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+        }
+
+        .hud-item {
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #difficultySelect {
+            background: rgba(0, 0, 0, 0.9);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .title {
+            font-size: 48px;
+            color: #4CAF50;
+            margin-bottom: 30px;
+        }
+
+        .button-container {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+        }
+
+        button {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+        }
+
+        #gameOver {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+        }
+
+        .game-over-title {
+            font-size: 52px;
+            color: #ff4444;
+            margin-bottom: 20px;
+        }
+
+        .score-display {
+            font-size: 28px;
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div id="difficultySelect">
+        <h1 class="title">Falling Items Game</h1>
+        <div class="button-container">
+            <button id="easyBtn">Easy</button>
+            <button id="mediumBtn">Medium</button>
+            <button id="hardBtn">Hard</button>
+        </div>
+    </div>
+
+    <div id="hud">
+        <div class="hud-item">
+            <span>🎯</span>
+            <span id="score">Score: 0</span>
+        </div>
+        <div class="hud-item">
+            <span>❤️</span>
+            <span id="lives">Lives: 3</span>
+        </div>
+        <div class="hud-item">
+            <span>⭐</span>
+            <span id="level">Level: 1</span>
+        </div>
+    </div>
+
+    <div class="game-container" id="gameContainer">
+        <div id="player"></div>
+        <div id="gameOver">
+            <h2 class="game-over-title">Game Over!</h2>
+            <div class="score-display">
+                Final Score: <span id="finalScore">0</span>
+            </div>
+            <button id="restartBtn">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        // Game elements
+        const gameContainer = document.getElementById('gameContainer');
+        const player = document.getElementById('player');
+        const scoreDisplay = document.getElementById('score');
+        const livesDisplay = document.getElementById('lives');
+        const levelDisplay = document.getElementById('level');
+        const gameOverDisplay = document.getElementById('gameOver');
+        const finalScoreDisplay = document.getElementById('finalScore');
+        const difficultySelect = document.getElementById('difficultySelect');
+        const hud = document.getElementById('hud');
+
+        // Game state
+        let score = 0;
+        let lives = 3;
+        let level = 1;
+        let playerX = 0;
+        let items = [];
+        let isGameOver = false;
+        let moveLeft = false;
+        let moveRight = false;
+        let fallSpeed = 3;
+        let spawnRate = 0.05;
+        let scoreThreshold = 50;
+        let difficulty = 'easy';
+        let gameLoop;
+
+        // Difficulty selection
+        document.getElementById('easyBtn').addEventListener('click', () => startWithDifficulty('easy'));
+        document.getElementById('mediumBtn').addEventListener('click', () => startWithDifficulty('medium'));
+        document.getElementById('hardBtn').addEventListener('click', () => startWithDifficulty('hard'));
+
+        function startWithDifficulty(difficultyLevel) {
+            difficulty = difficultyLevel;
+            switch (difficulty) {
+                case 'easy':
+                    fallSpeed = 3;
+                    spawnRate = 0.05;
+                    break;
+                case 'medium':
+                    fallSpeed = 5;
+                    spawnRate = 0.1;
+                    break;
+                case 'hard':
+                    fallSpeed = 7;
+                    spawnRate = 0.15;
+                    break;
+            }
+            
+            difficultySelect.style.display = 'none';
+            gameContainer.style.display = 'block';
+            hud.style.display = 'flex';
+            startGame();
+        }
+
+        function startGame() {
+            score = 0;
+            lives = 3;
+            level = 1;
+            items = [];
+            isGameOver = false;
+            playerX = gameContainer.clientWidth / 2 - player.offsetWidth / 2;
+
+            // Clear existing items
+            const existingItems = document.querySelectorAll('.item');
+            existingItems.forEach(item => item.remove());
+
+            // Reset displays
+            updateHUD();
+            player.style.left = `${playerX}px`;
+            gameOverDisplay.style.display = 'none';
+
+            // Start game loop
+            if (gameLoop) cancelAnimationFrame(gameLoop);
+            gameLoop = requestAnimationFrame(updateGameLoop);
+        }
+
+        // Controls
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') moveLeft = true;
+            if (e.key === 'ArrowRight') moveRight = true;
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft') moveLeft = false;
+            if (e.key === 'ArrowRight') moveRight = false;
+        });
+
+        function createItem() {
+            const item = document.createElement('div');
+            const randomType = Math.random();
+            
+            if (randomType < 0.4) {
+                item.classList.add('item', 'green-item');
+            } else if (randomType < 0.7) {
+                item.classList.add('item', 'red-item');
+            } else if (randomType < 0.9) {
+                item.classList.add('item', 'blue-item');
+            } else {
+                item.classList.add('item', 'gold-item');
+            }
+
+            item.style.left = `${Math.random() * (gameContainer.clientWidth - 30)}px`;
+            item.style.top = '0px';
+            gameContainer.appendChild(item);
+            items.push(item);
+        }
+
+        function updateGameLoop() {
+            if (!isGameOver) {
+                if (moveLeft && playerX > 0) {
+                    playerX -= 10;
+                }
+                if (moveRight && playerX < gameContainer.clientWidth - player.offsetWidth) {
+                    playerX += 10;
+                }
+
+                player.style.left = `${playerX}px`;
+
+                if (Math.random() < spawnRate) {
+                    createItem();
+                }
+
+                updateGame();
+                gameLoop = requestAnimationFrame(updateGameLoop);
+            }
+        }
+
+        function updateGame() {
+            items.forEach((item, index) => {
+                const itemTop = parseFloat(item.style.top || 0) + fallSpeed;
+                item.style.top = `${itemTop}px`;
+
+                // Check for collision between player and falling items
+                if (itemTop > gameContainer.clientHeight - player.offsetHeight &&
+                    parseFloat(item.style.left) + item.offsetWidth > playerX &&
+                    parseFloat(item.style.left) < playerX + player.offsetWidth) {
+
+                    // Handle item collection
+                    if (item.classList.contains('green-item') || item.classList.contains('blue-item')) {
+                        score += 10; // Add points for green and blue items
+                        item.style.display = 'none'; // Hide the item after collection
+                        items.splice(index, 1); // Remove from items array
+                    } else if (item.classList.contains('red-item')) {
+                        lives -= 1; // Lose a life for red items
+                        item.style.display = 'none'; // Hide the item after collision
+                        items.splice(index, 1); // Remove from items array
+                    } else if (item.classList.contains('gold-item')) {
+                        score += 50; // Add more points for gold items
+                        item.style.display = 'none'; // Hide the item after collection
+                        items.splice(index, 1); // Remove from items array
+                    }
+                }
+
+                // Remove items that are off-screen
+                if (itemTop > gameContainer.clientHeight) {
+                    item.style.display = 'none'; // Hide the item if it's off-screen
+                    items.splice(index, 1); // Remove from items array
+                }
+            });
+
+            updateHUD(); // Update score, lives, and level
+
+            if (lives <= 0) {
+                gameOver(); // Check if the game is over
+            }
+        }
+
+        function updateHUD() {
+            scoreDisplay.textContent = `Score: ${score}`;
+            livesDisplay.textContent = `Lives: ${lives}`;
+            levelDisplay.textContent = `Level: ${level}`;
+        }
+
+        function gameOver() {
+            isGameOver = true;
+            finalScoreDisplay.textContent = score;
+            gameOverDisplay.style.display = 'block';
+            if (score > parseInt(localStorage.getItem('highScore') || '0')) {
+                localStorage.setItem('highScore', score);
+            }
+        }
+
+        document.getElementById('restartBtn').addEventListener('click', () => {
+            gameOverDisplay.style.display = 'none';
+            startGame();
+        });
+
+    </script>
+</body>
+</html>
